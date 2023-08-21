@@ -1,0 +1,52 @@
+---
+name: "Create infra components: CI"
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      webapps:
+        description: "Web apps (separated by comma)"
+        default: '["webAppEastus","webAppCentralUs"]'
+      database:
+        description: "Azure SQL database name (separated by comma)"
+        default: '["sqlDatabaseEastUs"]'
+
+jobs:
+  install-dependencies:
+    runs-on: [ubuntu-latest]
+    steps:
+
+      - name: "Set up required dependencies"
+        run: |
+          echo "Install dependencies"
+
+  create_infrastructure:
+    runs-on: [ubuntu-latest]
+    needs: [install-dependencies]
+    strategy:
+      matrix:
+        web: ${{ fromJson(github.event.inputs.envs) }}
+        db: ${{ fromJson(github.event.inputs.products) }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          list-files: shell
+          filters: |
+            yaml:
+              - added|modified: '**.yaml'
+              - added|modified: '**.yml'
+              - added|modified: '*.yamllint'
+
+
+      - uses: Azure/login@v1
+        with: # Set Azure credentials secret as an input
+          creds: '{
+                    "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
+                    "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
+                    "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+                    "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+                  }'
